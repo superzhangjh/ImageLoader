@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    package="com.zjh.imageloader">
-
-    <uses-permission android:name="android.permission.INTERNET" />
+    package="com.zjh.demo.imageloader">
 
     <application
         android:allowBackup="true"
