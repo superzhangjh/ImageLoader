@@ -2,6 +2,7 @@ package com.zjh.imageloader
 
 import android.app.Application
 import android.content.ComponentCallbacks
+import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
@@ -11,6 +12,8 @@ import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.target.ImageViewTarget
+import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.request.transition.Transition
 import com.zjh.imageloader.options.ImageOptions
 import com.zjh.imageloader.utils.BitmapUtils
 import com.zjh.imageloader.utils.JobLifecycleObserver
@@ -75,6 +78,50 @@ class ImageLoader {
                 load(iv, resource, ratio, maxByteCount)
             }
         })
+    }
+
+    /**
+     * 加载图片，并提供回调（用于设置View的background等）
+     */
+    fun load(context: Context, url: Any?, ratio: Float = 1f, maxByteCount: Int = -1, callback: (bitmap: Bitmap) -> Unit) {
+        Glide.with(context).asBitmap().load(url).into(object : SimpleTarget<Bitmap>() {
+            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                load(context, resource, ratio, maxByteCount, callback)
+            }
+        })
+    }
+
+    /**
+     * 加载图片，并提供回调（用于设置View的background等）
+     */
+    fun load(context: Context, bitmap: Bitmap?, ratio: Float = 1f, maxByteCount: Int = -1, listener: (bitmap: Bitmap) -> Unit) {
+        if (bitmap == null) {
+            return
+        }
+        var bitmapDeferred: Deferred<Bitmap>? = null
+        if (BitmapUtils.isNeedCompress(maxByteCount, ratio)) {
+            //io:压缩bitmap
+            bitmapDeferred = GlobalScope.async(context = Dispatchers.IO) {
+                Log.d(TAG, "压缩前:${bitmap.byteCount} width:${bitmap.width} height:${bitmap.height}")
+                BitmapUtils.compress(bitmap, ratio, maxByteCount).apply {
+                    Log.d(TAG, "压缩后:${byteCount} width:${width} height:${height}")
+                }
+            }
+        }
+
+        bitmapDeferred?.run {
+            //main:设置image的bitmap
+            val imageJob = GlobalScope.launch(context = Dispatchers.Main) {
+                listener.invoke(await())
+            }
+
+            //注册job自动回收
+            if (context is FragmentActivity) {
+                context.lifecycle.addObserver(JobLifecycleObserver(this, imageJob))
+            }
+        } ?: run {
+            listener.invoke(bitmap)
+        }
     }
 
     fun load(iv: ImageView, drawable: Drawable?, ratio: Float = 1f, maxByteCount: Int = -1) {
