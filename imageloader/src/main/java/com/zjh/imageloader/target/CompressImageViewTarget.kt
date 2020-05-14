@@ -10,11 +10,5 @@ import android.widget.ImageView
  */
 abstract class CompressImageViewTarget<Z>(private val imageView: ImageView, ratio: Double = 1.0) : CompressViewTarget<Z>(imageView, ratio) {
 
-    override fun getCurrentDrawable(): Drawable? {
-        return imageView.drawable
-    }
 
-    override fun setDrawable(drawable: Drawable?) {
-        imageView.setImageDrawable(drawable)
-    }
 }

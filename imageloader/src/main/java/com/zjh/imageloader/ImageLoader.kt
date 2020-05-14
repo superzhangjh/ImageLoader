@@ -62,30 +62,38 @@ class ImageLoader {
     }
 
     /**
-     * 加载图片
-     * @param target 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
+     * 兼容java调用
      */
-    fun load(target: View, url: Any?, options: ImageOptions? = defaultOptions) {
-        if (url == null) {
-            return
-        }
-        val ratio = options?.getCompressRatio() ?: 1.0
-        Glide.with(target.context)
-            .load(url)
-            .apply {
-                options?.getRequestOptions()?.let { apply(it) }
-            }
-            .into(getCompressTarget(target, ratio))
+    fun load(view: View, url: Any?, options: ImageOptions) {
+        load(view, url, options, getCompressTarget(view, options.getCompressRatio()))
     }
 
-    private fun getCompressTarget(target: View, ratio: Double): CompressViewTarget<Drawable> {
-        return if (target is ImageView) {
-            object : CompressImageViewTarget<Drawable>(target,  ratio) {
-                override fun setResource(resource: Drawable?) = target.setImageDrawable(resource)
+    /**
+     * 加载图片
+     * @param view 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
+     */
+    fun load(view: View,
+             url: Any?,
+             options: ImageOptions? = defaultOptions,
+             target: CompressViewTarget<Drawable> = getCompressTarget(view, options?.getCompressRatio() ?: 1.0)
+    ) {
+        if (url == null) { return }
+        Glide.with(view.context)
+            .load(url)
+            .apply { options?.getRequestOptions()?.let { apply(it) } }
+            .into(target)
+    }
+
+    private fun getCompressTarget(view: View, ratio: Double): CompressViewTarget<Drawable> {
+        return if (view is ImageView) {
+            object : CompressImageViewTarget<Drawable>(view,  ratio) {
+                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                    view.setImageDrawable(resource)
+                }
             }
-        } else object : CompressViewTarget<Drawable>(target,  ratio) {
-            override fun setResource(resource: Drawable?) {
-                target.background = resource
+        } else object : CompressViewTarget<Drawable>(view,  ratio) {
+            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                view.background = resource
             }
         }
     }

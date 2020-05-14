@@ -2,7 +2,6 @@ package com.zjh.imageloader.target
 
 import android.content.Context
 import android.graphics.Point
-import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.util.Log
 import android.view.View
@@ -15,7 +14,6 @@ import androidx.annotation.VisibleForTesting
 import com.bumptech.glide.request.Request
 import com.bumptech.glide.request.target.SizeReadyCallback
 import com.bumptech.glide.request.target.Target
-import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.util.Preconditions
 import com.bumptech.glide.util.Synthetic
 import com.zjh.imageloader.R
@@ -28,53 +26,26 @@ import java.util.*
  * @date 2020/5/14 0014
  * @param ratio 图片质量压缩比例
  */
-abstract class CompressViewTarget<Z>(view: View, ratio: Double = 1.0) : Target<Z>, Transition.ViewAdapter {
+abstract class CompressViewTarget<Z>(view: View, ratio: Double = 1.0) : Target<Z> {
 
     private val sizeDeterminer: SizeDeterminer
-    private var animatable: Animatable? = null
 
-    private val view: View = Preconditions.checkNotNull(view)
-
-    override fun getView(): View {
-        return view
-    }
+    val view: View = Preconditions.checkNotNull(view)
 
     private var attachStateListener: OnAttachStateChangeListener? = null
     private var isClearedByUs = false
     private var isAttachStateListenerAdded = false
 
     override fun onStart() {
-        animatable?.start()
+
     }
 
     override fun onStop() {
-        animatable?.stop()
+
     }
 
     override fun onDestroy() {
         // Default empty.
-    }
-
-    override fun getCurrentDrawable(): Drawable? {
-        return view.background
-    }
-
-    override fun setDrawable(drawable: Drawable?) {
-        view.background = drawable
-    }
-
-    private fun setResourceInternal(resource: Z?) {
-        setResource(resource)
-        maybeUpdateAnimatable(resource)
-    }
-
-    private fun maybeUpdateAnimatable(resource: Z?) {
-        if (resource is Animatable) {
-            animatable = resource
-            animatable!!.start()
-        } else {
-            animatable = null
-        }
     }
 
     fun waitForLayout(): CompressViewTarget<Z> {
@@ -120,36 +91,24 @@ abstract class CompressViewTarget<Z>(view: View, ratio: Double = 1.0) : Target<Z
 
     override fun onLoadStarted(placeholder: Drawable?) {
         maybeAddAttachStateListener()
-        setResourceInternal(null)
-        setDrawable(placeholder)
+        setDrawable(null)
     }
 
     override fun onLoadFailed(errorDrawable: Drawable?) {
-        setResourceInternal(null)
-        setDrawable(errorDrawable)
+        setDrawable(null)
     }
 
     override fun onLoadCleared(placeholder: Drawable?) {
         sizeDeterminer.clearCallbacksAndListener()
-        if (animatable != null) {
-            animatable!!.stop()
-        }
-        setResourceInternal(null)
         setDrawable(placeholder)
         if (!isClearedByUs) {
             maybeRemoveAttachStateListener()
         }
     }
 
-    override fun onResourceReady(resource: Z, transition: Transition<in Z>?) {
-        if (transition == null || !transition.transition(resource, this)) {
-            setResourceInternal(resource)
-        } else {
-            maybeUpdateAnimatable(resource)
-        }
+    protected fun setDrawable(drawable: Drawable?) {
+        view.background = drawable
     }
-
-    protected abstract fun setResource(resource: Z?)
 
     override fun setRequest(request: Request?) {
         tag = request

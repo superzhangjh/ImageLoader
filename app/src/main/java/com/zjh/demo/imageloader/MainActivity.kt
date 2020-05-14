@@ -39,7 +39,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         //Application中调用
-        ImageLoader.instance.defaultOptions = DefImgOpts()
         ImageLoader.instance.setOnLowMemory(application)
 
         //原图
@@ -95,7 +94,7 @@ class MainActivity : AppCompatActivity() {
             .error(R.drawable.error)
             .load(url)
             .into(object : CompressViewTarget<Bitmap>(iv4, ratio) {
-                override fun setResource(resource: Bitmap?) {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     iv4.setImageBitmap(resource)
                     tv4.text = "压缩 ${ratio}倍\n${getBitmapInfo(resource)}"
                 }
@@ -109,7 +108,7 @@ class MainActivity : AppCompatActivity() {
             .error(R.drawable.error)
             .load(url)
             .into(object : CompressImageViewTarget<Bitmap>(iv5, ratio) {
-                override fun setResource(resource: Bitmap?) {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
                     iv5.setImageBitmap(resource)
                     tv5.text = "压缩 ${ratio}倍(RGB_565 不透明)\n${getBitmapInfo(resource)}"
                 }
