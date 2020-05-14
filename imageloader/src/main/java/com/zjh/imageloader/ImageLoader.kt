@@ -53,50 +53,50 @@ class ImageLoader {
             }
         })
     }
-
-    /**
-     * 兼容java调用
-     */
-    fun load(target: View, url: Any?) {
-        load(target, url, defaultOptions)
-    }
-
-    /**
-     * 兼容java调用
-     */
-    fun load(view: View, url: Any?, options: ImageOptions) {
-        load(view, url, options, getCompressTarget(view, options.getCompressRatio()))
-    }
-
-    /**
-     * 加载图片
-     * @param view 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
-     */
-    fun load(view: View,
-             url: Any?,
-             options: ImageOptions? = defaultOptions,
-             target: CompressViewTarget<Drawable> = getCompressTarget(view, options?.getCompressRatio() ?: 1.0)
-    ) {
-        if (url == null) { return }
-        Glide.with(view.context)
-            .load(url)
-            .apply { options?.getRequestOptions()?.let { apply(it) } }
-            .into(target)
-    }
-
-    private fun getCompressTarget(view: View, ratio: Double): CompressViewTarget<Drawable> {
-        return if (view is ImageView) {
-            object : CompressImageViewTarget<Drawable>(view,  ratio) {
-                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                    view.setImageDrawable(resource)
-                }
-            }
-        } else object : CompressViewTarget<Drawable>(view,  ratio) {
-            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                view.background = resource
-            }
-        }
-    }
+//
+//    /**
+//     * 兼容java调用
+//     */
+//    fun load(target: View, url: Any?) {
+//        load(target, url, defaultOptions)
+//    }
+//
+//    /**
+//     * 兼容java调用
+//     */
+//    fun load(view: View, url: Any?, options: ImageOptions) {
+//        load(view, url, options, getCompressTarget(view, options.getCompressRatio()))
+//    }
+//
+//    /**
+//     * 加载图片
+//     * @param view 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
+//     */
+//    fun load(view: View,
+//             url: Any?,
+//             options: ImageOptions? = defaultOptions,
+//             target: CompressViewTarget<Drawable> = getCompressTarget(view, options?.getCompressRatio() ?: 1.0)
+//    ) {
+//        if (url == null) { return }
+//        Glide.with(view.context)
+//            .load(url)
+//            .apply { options?.getRequestOptions()?.let { apply(it) } }
+//            .into(target)
+//    }
+//
+//    private fun getCompressTarget(view: View, ratio: Double): CompressViewTarget<Drawable> {
+//        return if (view is ImageView) {
+//            object : CompressImageViewTarget<Drawable>(view,  ratio) {
+//                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+//                    view.setImageDrawable(resource)
+//                }
+//            }
+//        } else object : CompressViewTarget<Drawable>(view,  ratio) {
+//            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+//                view.background = resource
+//            }
+//        }
+//    }
 
 //    fun load(iv: ImageView, url: Any?, options: ImageOptions? = defaultOptions) {
 //        //Glide 发起请求
