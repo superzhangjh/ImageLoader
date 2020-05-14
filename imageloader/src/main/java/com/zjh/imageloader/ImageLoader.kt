@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import androidx.fragment.app.FragmentActivity
 import com.bumptech.glide.Glide
@@ -15,6 +16,8 @@ import com.bumptech.glide.request.target.ImageViewTarget
 import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.transition.Transition
 import com.zjh.imageloader.options.ImageOptions
+import com.zjh.imageloader.target.CompressImageViewTarget
+import com.zjh.imageloader.target.CompressViewTarget
 import com.zjh.imageloader.utils.BitmapUtils
 import com.zjh.imageloader.utils.JobLifecycleObserver
 import kotlinx.coroutines.*
@@ -51,116 +54,126 @@ class ImageLoader {
         })
     }
 
-    fun load(iv: ImageView, url: Any?, options: ImageOptions? = defaultOptions) {
-        //Glide 发起请求
-        Glide.with(iv.context).load(url).run {
-
-            options?.getRequestOptions()?.let { apply(it) }
-
-            into(object : ImageViewTarget<Drawable?>(iv) {
-                /**
-                 * Glide会自动将图片压缩至imageView的大小，这里压缩的操作其实是对图片按指定比例去压缩大小，从而减少内存占用。
-                 */
-                override fun setResource(resource: Drawable?) {
-                    if (options == null) {
-                        load(iv, resource)
-                    } else {
-                        load(iv, resource, options.getCompressionRatio(), options.getMaxByteCount())
-                    }
-                }
-            })
-        }
+    /**
+     * 兼容java调用
+     */
+    fun load(target: View, url: Any?) {
+        load(target, url, defaultOptions)
     }
 
-    fun load(iv: ImageView, url: Any?, ratio: Float = 1f, maxByteCount: Int = -1) {
-        Glide.with(iv.context).load(url).into(object : ImageViewTarget<Drawable?>(iv) {
+    /**
+     * 加载图片
+     * @param target 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
+     */
+    fun load(target: View, url: Any?, options: ImageOptions? = defaultOptions) {
+        if (url == null) {
+            return
+        }
+        val ratio = options?.getCompressRatio() ?: 1.0
+        Glide.with(target.context)
+            .load(url)
+            .apply {
+                options?.getRequestOptions()?.let { apply(it) }
+            }
+            .into(getCompressTarget(target, ratio))
+    }
+
+    private fun getCompressTarget(target: View, ratio: Double): CompressViewTarget<Drawable> {
+        return if (target is ImageView) {
+            object : CompressImageViewTarget<Drawable>(target,  ratio) {
+                override fun setResource(resource: Drawable?) = target.setImageDrawable(resource)
+            }
+        } else object : CompressViewTarget<Drawable>(target,  ratio) {
             override fun setResource(resource: Drawable?) {
-                load(iv, resource, ratio, maxByteCount)
+                target.background = resource
             }
-        })
-    }
-
-    /**
-     * 加载图片，并提供回调（用于设置View的background等）
-     */
-    fun load(context: Context, url: Any?, ratio: Float = 1f, maxByteCount: Int = -1, callback: (bitmap: Bitmap) -> Unit) {
-        Glide.with(context).asBitmap().load(url).into(object : SimpleTarget<Bitmap>() {
-            override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
-                load(context, resource, ratio, maxByteCount, callback)
-            }
-        })
-    }
-
-    /**
-     * 加载图片，并提供回调（用于设置View的background等）
-     */
-    fun load(context: Context, bitmap: Bitmap?, ratio: Float = 1f, maxByteCount: Int = -1, listener: (bitmap: Bitmap) -> Unit) {
-        if (bitmap == null) {
-            return
-        }
-        var bitmapDeferred: Deferred<Bitmap>? = null
-        if (BitmapUtils.isNeedCompress(maxByteCount, ratio)) {
-            //io:压缩bitmap
-            bitmapDeferred = GlobalScope.async(context = Dispatchers.IO) {
-                Log.d(TAG, "压缩前:${bitmap.byteCount} width:${bitmap.width} height:${bitmap.height}")
-                BitmapUtils.compress(bitmap, ratio, maxByteCount).apply {
-                    Log.d(TAG, "压缩后:${byteCount} width:${width} height:${height}")
-                }
-            }
-        }
-
-        bitmapDeferred?.run {
-            //main:设置image的bitmap
-            val imageJob = GlobalScope.launch(context = Dispatchers.Main) {
-                listener.invoke(await())
-            }
-
-            //注册job自动回收
-            if (context is FragmentActivity) {
-                context.lifecycle.addObserver(JobLifecycleObserver(this, imageJob))
-            }
-        } ?: run {
-            listener.invoke(bitmap)
         }
     }
 
-    fun load(iv: ImageView, drawable: Drawable?, ratio: Float = 1f, maxByteCount: Int = -1) {
-        if (drawable == null) {
-            return
-        }
-        var bitmapDeferred: Deferred<Bitmap>? = null
-        if (BitmapUtils.isNeedCompress(maxByteCount, ratio)) {
-            //io:压缩bitmap
-            bitmapDeferred = GlobalScope.async(context = Dispatchers.IO) {
-                val bitmap = (drawable as BitmapDrawable).bitmap.apply {
-                    Log.d(TAG, "压缩前:${byteCount} width:${width} height:${height}")
-                }
+//    fun load(iv: ImageView, url: Any?, options: ImageOptions? = defaultOptions) {
+//        //Glide 发起请求
+//        Glide.with(iv.context).load(url).run {
+//
+//            options?.getRequestOptions()?.let { apply(it) }
+//
+//            into(object : ImageViewTarget<Drawable?>(iv) {
+//                /**
+//                 * Glide会自动将图片压缩至imageView的大小，这里压缩的操作其实是对图片按指定比例去压缩大小，从而减少内存占用。
+//                 */
+//                override fun setResource(resource: Drawable?) {
+//                    if (options == null) {
+//                        load(iv, resource)
+//                    } else {
+//                        load(iv, resource, options.getCompressionRatio(), options.getMaxByteCount())
+//                    }
+//                }
+//            })
+//        }
+//    }
 
-                BitmapUtils.compress(bitmap, ratio, maxByteCount).apply {
-                    Log.d(TAG, "压缩后:${byteCount} width:${width} height:${height}")
-                }
-            }
-        }
-
-        bitmapDeferred?.run {
-            //main:设置image的bitmap
-            val imageJob = GlobalScope.launch(context = Dispatchers.Main) {
-                iv.setImageBitmap(await())
-            }
-
-            //注册job自动回收
-            if (iv.context is FragmentActivity) {
-                (iv.context as FragmentActivity).lifecycle.addObserver(JobLifecycleObserver(this, imageJob))
-            }
-        } ?: run {
-            iv.setImageDrawable(drawable)
-        }
-    }
-
-    /**
-     * 兼容Java调用
-     */
-    fun load(iv: ImageView, url: Any?) {
-        load(iv, url, defaultOptions)
-    }
+//    /**
+//     * 加载图片，并提供回调（用于设置View的background等）
+//     */
+//    fun load(context: Context, bitmap: Bitmap?, ratio: Float = 1f, maxByteCount: Int = -1, listener: (bitmap: Bitmap) -> Unit) {
+//        if (bitmap == null) {
+//            return
+//        }
+//        var bitmapDeferred: Deferred<Bitmap>? = null
+//        if (BitmapUtils.isNeedCompress(maxByteCount, ratio)) {
+//            //io:压缩bitmap
+//            bitmapDeferred = GlobalScope.async(context = Dispatchers.IO) {
+//                Log.d(TAG, "压缩前:${bitmap.byteCount} width:${bitmap.width} height:${bitmap.height}")
+//                BitmapUtils.compress(bitmap, ratio, maxByteCount).apply {
+//                    Log.d(TAG, "压缩后:${byteCount} width:${width} height:${height}")
+//                }
+//            }
+//        }
+//
+//        bitmapDeferred?.run {
+//            //main:设置image的bitmap
+//            val imageJob = GlobalScope.launch(context = Dispatchers.Main) {
+//                listener.invoke(await())
+//            }
+//
+//            //注册job自动回收
+//            if (context is FragmentActivity) {
+//                context.lifecycle.addObserver(JobLifecycleObserver(this, imageJob))
+//            }
+//        } ?: run {
+//            listener.invoke(bitmap)
+//        }
+//    }
+//
+//    fun load(iv: ImageView, drawable: Drawable?, ratio: Float = 1f, maxByteCount: Int = -1) {
+//        if (drawable == null) {
+//            return
+//        }
+//        var bitmapDeferred: Deferred<Bitmap>? = null
+//        if (BitmapUtils.isNeedCompress(maxByteCount, ratio)) {
+//            //io:压缩bitmap
+//            bitmapDeferred = GlobalScope.async(context = Dispatchers.IO) {
+//                val bitmap = (drawable as BitmapDrawable).bitmap.apply {
+//                    Log.d(TAG, "压缩前:${byteCount} width:${width} height:${height}")
+//                }
+//
+//                BitmapUtils.compress(bitmap, ratio, maxByteCount).apply {
+//                    Log.d(TAG, "压缩后:${byteCount} width:${width} height:${height}")
+//                }
+//            }
+//        }
+//
+//        bitmapDeferred?.run {
+//            //main:设置image的bitmap
+//            val imageJob = GlobalScope.launch(context = Dispatchers.Main) {
+//                iv.setImageBitmap(await())
+//            }
+//
+//            //注册job自动回收
+//            if (iv.context is FragmentActivity) {
+//                (iv.context as FragmentActivity).lifecycle.addObserver(JobLifecycleObserver(this, imageJob))
+//            }
+//        } ?: run {
+//            iv.setImageDrawable(drawable)
+//        }
+//    }
 }
