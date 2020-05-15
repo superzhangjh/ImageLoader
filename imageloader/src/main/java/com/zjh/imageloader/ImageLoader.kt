@@ -2,25 +2,16 @@ package com.zjh.imageloader
 
 import android.app.Application
 import android.content.ComponentCallbacks
-import android.content.Context
 import android.content.res.Configuration
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
-import android.util.Log
 import android.view.View
 import android.widget.ImageView
-import androidx.fragment.app.FragmentActivity
 import com.bumptech.glide.Glide
-import com.bumptech.glide.request.target.ImageViewTarget
-import com.bumptech.glide.request.target.SimpleTarget
-import com.bumptech.glide.request.transition.Transition
 import com.zjh.imageloader.options.ImageOptions
+import com.zjh.imageloader.target.BaseCompAnimatableViewTarget
 import com.zjh.imageloader.target.CompressImageViewTarget
+import com.zjh.imageloader.target.CompressResViewTarget
 import com.zjh.imageloader.target.CompressViewTarget
-import com.zjh.imageloader.utils.BitmapUtils
-import com.zjh.imageloader.utils.JobLifecycleObserver
-import kotlinx.coroutines.*
 
 /**
  * 图片加载工具类（网络图片加载、bitmap压缩）
@@ -41,6 +32,13 @@ class ImageLoader {
     var defaultOptions : ImageOptions? = null
 
     /**
+     * 默认缩放
+     */
+    fun getDefCompressRatio(): Double {
+        return defaultOptions?.getCompressRatio() ?: 1.0
+    }
+
+    /**
      * 设置低内存时释放缓存
      */
     fun setOnLowMemory(app: Application) {
@@ -53,50 +51,66 @@ class ImageLoader {
             }
         })
     }
-//
-//    /**
-//     * 兼容java调用
-//     */
-//    fun load(target: View, url: Any?) {
-//        load(target, url, defaultOptions)
-//    }
-//
-//    /**
-//     * 兼容java调用
-//     */
-//    fun load(view: View, url: Any?, options: ImageOptions) {
-//        load(view, url, options, getCompressTarget(view, options.getCompressRatio()))
-//    }
-//
-//    /**
-//     * 加载图片
-//     * @param view 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景
-//     */
-//    fun load(view: View,
-//             url: Any?,
-//             options: ImageOptions? = defaultOptions,
-//             target: CompressViewTarget<Drawable> = getCompressTarget(view, options?.getCompressRatio() ?: 1.0)
-//    ) {
-//        if (url == null) { return }
-//        Glide.with(view.context)
-//            .load(url)
-//            .apply { options?.getRequestOptions()?.let { apply(it) } }
-//            .into(target)
-//    }
-//
-//    private fun getCompressTarget(view: View, ratio: Double): CompressViewTarget<Drawable> {
-//        return if (view is ImageView) {
-//            object : CompressImageViewTarget<Drawable>(view,  ratio) {
-//                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-//                    view.setImageDrawable(resource)
-//                }
-//            }
-//        } else object : CompressViewTarget<Drawable>(view,  ratio) {
-//            override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-//                view.background = resource
-//            }
-//        }
-//    }
+
+    /**
+     * 兼容java调用
+     */
+    fun load(target: View, url: Any?) {
+        load(target, url, defaultOptions)
+    }
+
+    /**
+     * 兼容java调用
+     */
+    fun load(view: View, url: Any?, options: ImageOptions) {
+        load(view, url, options, getCompressTarget(view, url, options.getCompressRatio()))
+    }
+
+    /**
+     * 兼容java调用
+     */
+    fun load(view: View, url: Any?, target: BaseCompAnimatableViewTarget<View, Drawable>) {
+        load(view, url, defaultOptions, target)
+    }
+
+    /**
+     * 加载图片
+     * @param view 显示图片的View， 如果是ImageView则设置设置到src，如果是普通的view则设置成背景(背景铺满)
+     */
+    fun load(view: View,
+             url: Any?,
+             options: ImageOptions? = defaultOptions,
+             target: BaseCompAnimatableViewTarget<out View, Drawable> = getCompressTarget(view, url, options?.getCompressRatio() ?: 1.0)
+    ) {
+        Glide.with(view.context)
+            .load(url)
+            .apply { options?.getRequestOptions()?.let { apply(it) } }
+            .into(target)
+    }
+
+    private fun getCompressTarget(view: View, url: Any?, ratio: Double) : BaseCompAnimatableViewTarget<out View, Drawable> {
+        return if (view is ImageView) {
+            object : CompressImageViewTarget<Drawable>(view, ratio) {
+                override fun setResource(target: ImageView, resource: Drawable?) {
+                    target.setImageDrawable(resource)
+                }
+            }
+        } else {
+            if (url is Int) {
+                object : CompressResViewTarget<Drawable>(view, ratio) {
+                    override fun setResource(target: View, resource: Drawable?) {
+                        target.background = resource
+                    }
+                }
+            } else {
+                object : CompressViewTarget<Drawable>(view, ratio) {
+                    override fun setResource(target: View, resource: Drawable?) {
+                        target.background = resource
+                    }
+                }
+            }
+        }
+    }
 
 //    fun load(iv: ImageView, url: Any?, options: ImageOptions? = defaultOptions) {
 //        //Glide 发起请求

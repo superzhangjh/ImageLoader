@@ -2,6 +2,7 @@ package com.zjh.imageloader.target
 
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
+import android.util.Log
 import android.view.View
 import com.bumptech.glide.request.transition.Transition
 import com.bumptech.glide.request.transition.Transition.ViewAdapter
@@ -38,6 +39,8 @@ abstract  class BaseCompAnimatableViewTarget<T : View, Z>(private val v: T, rati
     }
 
     override fun onResourceReady(resource: Z, transition: Transition<in Z?>?) {
+        val b = transition == null
+        val bb = transition?.transition(resource, this) == false
         if (transition == null || !transition.transition(resource, this)) {
             setResourceInternal(resource)
         } else {
@@ -54,9 +57,7 @@ abstract  class BaseCompAnimatableViewTarget<T : View, Z>(private val v: T, rati
     }
 
     private fun setResourceInternal(resource: Z?) {
-        // Order matters here. Set the resource first to make sure that the Drawable has a valid and
-        // non-null Callback before starting it.
-        setResource(resource)
+        setResource(v, resource)
         maybeUpdateAnimatable(resource)
     }
 
@@ -69,5 +70,5 @@ abstract  class BaseCompAnimatableViewTarget<T : View, Z>(private val v: T, rati
         }
     }
 
-    protected abstract fun setResource(resource: Z?)
+    protected abstract fun setResource(target: T, resource: Z?)
 }

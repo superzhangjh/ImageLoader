@@ -4,11 +4,11 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools"
-    android:padding="10dp">
+    android:padding="10dp"
+    android:id="@+id/content">
 
     <ImageView
         android:layout_margin="10dp"
-        android:scaleType="fitXY"
         android:id="@+id/iv1"
         android:background="#ccc"
         app:layout_constraintStart_toStartOf="parent"

@@ -3,15 +3,18 @@ package com.zjh.demo.imageloader
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.drawable.Drawable
+import android.media.Image
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.ImageViewTarget
 import com.bumptech.glide.request.target.SimpleTarget
 import com.bumptech.glide.request.transition.Transition
 import com.zjh.imageloader.ImageLoader
+import com.zjh.imageloader.options.ImageOptions
 import com.zjh.imageloader.target.BaseCompressViewTarget
 import com.zjh.imageloader.target.CompressImageViewTarget
 import com.zjh.imageloader.target.CompressViewTarget
@@ -29,13 +32,15 @@ class MainActivity : AppCompatActivity() {
 
         //Application中调用
         ImageLoader.instance.setOnLowMemory(application)
+        ImageLoader.instance.defaultOptions = object : ImageOptions {
+            override fun getCompressRatio() = 0.3
+            override fun getRequestOptions(): RequestOptions? = null
+        }
 
         //...
-        Glide.with(this)
-            .load(url)
-            .into(object : CompressViewTarget<Drawable>(iv1, 0.01) {
-            override fun setResource(resource: Drawable?) {
-                iv1.background = resource
+        ImageLoader.instance.load(content, R.drawable.user_login_bg1, target = object : CompressViewTarget<Drawable>(content) {
+            override fun setResource(target: View, resource: Drawable?) {
+                window.setBackgroundDrawable(resource)
             }
         })
 
